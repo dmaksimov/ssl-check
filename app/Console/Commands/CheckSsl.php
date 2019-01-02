@@ -13,7 +13,7 @@ class CheckSsl extends Command
      *
      * @var string
      */
-    protected $signature = 'check-ssl';
+    protected $signature = 'check-ssl {site?}';
 
     /**
      * The console command description.
@@ -46,6 +46,10 @@ class CheckSsl extends Command
 
         foreach (Forge::sites() as $site) {
             if ($site->name == 'default') continue;
+
+            if ($this->argument('site') && $this->argument('site') != $site->name) {
+                continue;
+            }
 
             if (in_array($site->name, Cache::get('ssl-checked-sites'))) {
                 $skippedCount++;
