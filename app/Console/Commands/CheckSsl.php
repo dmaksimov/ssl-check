@@ -21,6 +21,12 @@ class CheckSsl extends Command
      * @var string
      */
     protected $description = 'Check SSL of all sites';
+    
+    protected $ignore = [
+        'default',
+        'temp',
+        'scripts',
+    ];
 
     /**
      * Create a new command instance.
@@ -45,7 +51,9 @@ class CheckSsl extends Command
         }
 
         foreach ($this->getSites() as $site) {
-            if ($site == 'default') continue;
+            if (in_array($site, $this->ignore)) {
+                continue;
+            }
 
             if ($this->argument('site') && $this->argument('site') != $site) {
                 continue;
