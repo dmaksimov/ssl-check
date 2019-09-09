@@ -44,21 +44,21 @@ class CheckSsl extends Command
             Cache::put('ssl-checked-sites', [], 60);
         }
 
-        foreach (Forge::sites() as $site) {
-            if ($site->name == 'default') continue;
+        foreach ($this->getSites() as $site) {
+            if ($site == 'default') continue;
 
-            if ($this->argument('site') && $this->argument('site') != $site->name) {
+            if ($this->argument('site') && $this->argument('site') != $site) {
                 continue;
             }
 
-            if (in_array($site->name, Cache::get('ssl-checked-sites'))) {
+            if (in_array($site, Cache::get('ssl-checked-sites'))) {
                 $skippedCount++;
                 continue;
             }
 
-            $this->info($site->name);
+            $this->info($site);
             try {
-                $certificate = \Spatie\SslCertificate\SslCertificate::createForHostName($site->name);
+                $certificate = \Spatie\SslCertificate\SslCertificate::createForHostName($site);
                 $this->info('Expires: ' . $certificate->expirationDate());
                 if (! $certificate->isValid()) {
                     $this->warn('Certificate is invalid');
@@ -72,7 +72,7 @@ class CheckSsl extends Command
 
                 Cache::put(
                     'ssl-checked-sites',
-                    array_merge(Cache::get('ssl-checked-sites'), [$site->name]),
+                    array_merge(Cache::get('ssl-checked-sites'), [$site]),
                     60
                 );
             } catch (\Exception $e) {
@@ -105,7 +105,14 @@ class CheckSsl extends Command
 
         \Mail::raw($message, function ($message) use($site) {
             $message->to('david@cmsmax.com');
-            $message->subject('SSL issue on ' . $site->name);
+            $message->subject('SSL issue on ' . $site);
+        });
+    }
+
+    protected function getSites()
+    {
+        return collect(\File::directories('/home/forge/'))->map(function($dir) {
+            return str_replace('/home/forge/', '', $dir);
         });
     }
 }
