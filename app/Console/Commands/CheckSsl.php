@@ -21,7 +21,7 @@ class CheckSsl extends Command
      * @var string
      */
     protected $description = 'Check SSL of all sites';
-    
+
     protected $ignore = [
         'default',
         'temp',
@@ -64,30 +64,11 @@ class CheckSsl extends Command
                 continue;
             }
 
-            $this->info($site);
-            try {
-                $certificate = \Spatie\SslCertificate\SslCertificate::createForHostName($site);
-                $this->info('Expires: ' . $certificate->expirationDate());
-                if (! $certificate->isValid()) {
-                    $this->warn('Certificate is invalid');
-                    $this->notifyError($site, 'invalid');
-                }
-                if ($certificate->expirationDate()->lte(now())) {
-                    $this->warn('Certificate is expired');
-                    $this->notifyError($site, 'expired');
-                }
-                $this->line('');
+            $this->check($site);
 
-                Cache::put(
-                    'ssl-checked-sites',
-                    array_merge(Cache::get('ssl-checked-sites'), [$site]),
-                    60
-                );
-            } catch (\Exception $e) {
-                $this->warn('Error getting certificate info.');
-                $this->warn($e->getMessage());
-                $this->line('');
-                $this->notifyError($site, 'error', $e->getMessage());
+            if (starts_with($site, 'www.')) {
+                $site = str_replace('www.', '', $site);
+                $this->check($site);
             }
         }
 
@@ -122,5 +103,35 @@ class CheckSsl extends Command
         return collect(\File::directories('/home/forge/'))->map(function($dir) {
             return str_replace('/home/forge/', '', $dir);
         });
+    }
+
+    protected function check($site)
+    {
+        $this->info($site);
+
+        try {
+            $certificate = \Spatie\SslCertificate\SslCertificate::createForHostName($site);
+            $this->info('Expires: ' . $certificate->expirationDate());
+            if (! $certificate->isValid()) {
+                $this->warn('Certificate is invalid');
+                $this->notifyError($site, 'invalid');
+            }
+            if ($certificate->expirationDate()->lte(now())) {
+                $this->warn('Certificate is expired');
+                $this->notifyError($site, 'expired');
+            }
+            $this->line('');
+
+            Cache::put(
+                'ssl-checked-sites',
+                array_merge(Cache::get('ssl-checked-sites'), [$site]),
+                60
+            );
+        } catch (\Exception $e) {
+            $this->warn('Error getting certificate info.');
+            $this->warn($e->getMessage());
+            $this->line('');
+            $this->notifyError($site, 'error', $e->getMessage());
+        }
     }
 }
